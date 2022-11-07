@@ -10,6 +10,9 @@
 #define SUCESS TRUE
 #define FAILED FALSE
 
+#define DRAM_SIZE 1024*1024*1     // 1 MiB DRAM
+#define DRAM_BASE 0x80000000
+
 /*Configration structure for Emulator*/
 typedef struct emuConfig_t {
     char *inputFile;
@@ -91,11 +94,61 @@ void config_init(emuConfig *config) {
     config->binSize = 0;
 }
 
+void emulator_init(emuState *hart, emuConfig *config) {
+    hart->regs[0] = 0;
+    hart->regs[2] = DRAM_BASE + DRAM_SIZE; /*set Stack */
+    hart->pc = DRAM_BASE;
+    /*TODO check if its a elf or not if elf parse  populate mem      and hart-mem is equal to DRAM_SIZE memcpy elf parsed row
+      data into hart->mem*/
+    hart->mem = config->bin;
+}
+
+uint32_t load32_memory(emuState *hart) {
+    return (uint32_t) hart->mem[hart->pc - DRAM_BASE]
+        |  (uint32_t) hart->mem[hart->pc - DRAM_BASE] << 8
+        |  (uint32_t) hart->mem[hart->pc - DRAM_BASE] << 16
+        |  (uint32_t) hart->mem[hart->pc - DRAM_BASE] << 24;
+}
+uint32_t fetchInstruction(emuState *hart) {
+   return load32_memory(hart);
+
+}
+
+int  execute(emuState *hart, uint32_t inst) {
+   int opcode = inst & 0x7f;
+   int fun3   = (inst>>12) &0x7;
+   int fun7   = (inst>>25) &0x7f;
+return 0;//TODO
+
+}
+
+void start_emulation(emuState *hart) {
+    while(1) {
+        uint32_t inst = fetchInstruction(hart);
+        
+        hart->pc +=4;
+
+        if(!execute(hart,inst))
+            break;
+        /*dump register*/
+        if(hart->pc = 0)
+            break;
+    }
+
+}
+
 int main(int argc, char **argv) {
     emuConfig config;
+    emuState hart;
     config_init(&config);
     parse_options(argc,argv,&config);
     read_binary(&config);
+    /*Emulation init*/
+    emulator_init(&hart,&config);
+    
+    start_emulation(&hart);
+    
+
 
     return SUCESS;
 }
